@@ -1,0 +1,35 @@
+{% extends "alphabot/base.html" %}
+{% load static %}
+{% block title %}Coder | AlphaBot{% endblock %}
+
+{% block meta %}
+    <meta name="description" content="Get help with coding and programming languages.">
+    <meta name="keywords" content="Coding, Programming, AI, Assistant">
+    <meta name="author" content="Alphin">
+{% endblock %}
+
+{% block content %}
+  
+    <h2>💻 Coding Assistant</h2>
+    <p>Get help with Python, JavaScript, or any other programming language.</p>
+    {% if not user.is_authenticated %}
+    <div class="alert alert-warning mt-4">
+      <strong>Please <a href="{% url 'login' %}">log in</a> to use the Coding Assistant.</strong>
+    </div>
+   {% else %}
+
+    <div class="card p-3 mt-3">
+        <div id="coder-box" class="border p-3 mb-3" style="height: 400px; overflow-y: auto; background-color: #f8f9fa;"></div>
+
+        <form id="coder-form" class="d-flex">
+            <input type="text" id="coder-user-message" class="form-control me-2" placeholder="Ask something about code..." autocomplete="off">
+            <button type="submit" class="btn btn-primary">Send</button>
+        </form>
+
+        <button id="reset-btn-coder" class="btn btn-sm btn-outline-danger mt-3">Reset Chat</button>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script src="{% static 'alphabot/js/coder.js' %}"></script>
+  {% endif %}
+{% endblock %}

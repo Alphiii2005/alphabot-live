@@ -1,0 +1,33 @@
+{% extends "alphabot/base.html" %}
+
+{% block title %}Chat | AlphaBot{% endblock %}
+
+{% block meta %}
+  <meta name="description" content="Chat with AlphaBot's AI assistant.">
+  <meta name="keywords" content="Chat, AI, Assistant, AlphaBot">
+  <meta name="author" content="Alphin">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h2 class="text-white mb-3" style="font-family: 'Orbitron', sans-serif;">🧠 Chat</h2>
+  <p class="text-light">Talk to AlphaBot's AI assistant.</p>
+
+  <div class="card p-3 mt-3 bg-dark border-0 shadow" style="border-radius: 15px;">
+    <div id="chat-box" class="border p-3 mb-3 text-dark" 
+         style="height: 400px; overflow-y: auto; background-color: #f8f9fa; border-radius: 10px;">
+    </div>
+
+    <form id="chat-form" class="d-flex">
+      <input type="text" id="chat-user-message" class="form-control me-2" 
+             placeholder="Talk to AlphaBot..." autocomplete="off"
+             style="background-color: #D6C6B8; color: #fff; border: none; border-radius: 10px;">
+      <button type="submit" class="btn btn-primary px-4" style="border-radius: 10px;">Send</button>
+    </form>
+
+    <button id="reset-btn" class="btn btn-sm btn-outline-danger mt-3" style="border-radius: 8px;">
+      Reset Chat
+    </button>
+  </div>
+</div>
+{% endblock %}

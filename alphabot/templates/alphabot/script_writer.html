@@ -1,0 +1,45 @@
+{% extends "alphabot/base.html" %}
+
+{% block meta %}
+    <meta name="description" content="Generate scripts for YouTube or short films with AlphaBot's AI Script Writer.">
+    <meta name="keywords" content="Script, Writer, YouTube, Short Film, AI, Generator">
+    <meta name="author" content="Alphin">
+{% endblock %}
+
+{% block title %}Script Writer | AlphaBot{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="mx-auto" style="max-width: 800px;">
+    <div class="bg-light shadow rounded p-4">
+      <h2 class="text-center mb-3">🎬 Script Writing Bot</h2>
+      <p class="text-center text-muted mb-4">Generate scripts for YouTube videos, short films, or any creative idea.</p>
+
+      {% if not user.is_authenticated %}
+        <div class="alert alert-warning text-center">
+          <strong>Please <a href="{% url 'login' %}">log in</a> to generate a script.</strong>
+        </div>
+      {% else %}
+        <div class="mb-3">
+          <label for="script-input" class="form-label"><strong>Enter your idea or topic:</strong></label>
+          <input type="text" class="form-control form-control-lg" id="script-input" placeholder="e.g., A space adventure with a twist ending">
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <button id="generate-script" class="btn btn-primary btn-lg"  style="background-color: #CC5500">Generate Script</button>
+          <button id="download-pdf" class="btn btn-success btn-lg" style="display: none;">Download PDF</button>
+        </div>
+
+        <div id="loading" class="text-center mt-3" style="display:none;">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-2" >Generating content...</p>
+        </div>
+
+        <div id="generated-script" class="mt-4 p-3 border bg-white rounded" style="min-height: 150px; white-space: pre-wrap; color: #5A3E36"></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

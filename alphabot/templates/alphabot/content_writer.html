@@ -1,0 +1,45 @@
+{% extends "alphabot/base.html" %}
+
+
+{% block meta %}
+    <meta name="description" content="Generate scripts for YouTube or short films with AlphaBot's AI Script Writer.">
+    <meta name="keywords" content="Script, Writer, YouTube, Short Film, AI, Generator">
+    <meta name="author" content="Alphin">
+{% endblock %}
+
+{% block title %}Content Writer | AlphaBot{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column min-vh-100">
+    <div class="flex-grow-1 container py-5">
+        <div class="card p-5 shadow" style="background-color: #F4E3D7; border-radius: 20px; border: none;">
+            <h2 class="mb-4" style="font-family: 'Orbitron', sans-serif; color: #5C4033; font-size: 2rem;">✍️ Content Writer</h2>
+            <p class="mb-4" style="color: #5C4033; font-size: 1.1rem;">Enter a topic, and AlphaBot will generate a well-researched article or blog post.</p>
+
+            {% if not user.is_authenticated %}
+                <div class="alert alert-warning mt-3">
+                    <strong>Please <a href="{% url 'login' %}">log in</a> to generate content.</strong>
+                </div>
+            {% else %}
+                <textarea id="topic-input" class="form-control mb-4" rows="4"
+                          placeholder="Enter your topic here..."
+                          style="background-color: #fff7f2; border: 1px solid #A0522D; color: #5C4033; border-radius: 10px; font-size: 1rem;"></textarea>
+
+                <button id="generate-content"
+                        class="btn w-100 mb-3"
+                        style="background-color: #CC5500; color: white; font-weight: bold; font-size: 1.1rem;">
+                    Generate Content
+                </button>
+
+                <div id="loading" class="text-center mt-3" style="display:none; color: #5C4033;">
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span class="ms-2">⏳ Generating content...</span>
+                </div>
+
+                <div id="generated-content" class="p-4 mt-4 rounded"
+                     style="background-color: #fff7f2; color: #5A3E36; border: 1px solid #A0522D; min-height: 200px; color: #333;">
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

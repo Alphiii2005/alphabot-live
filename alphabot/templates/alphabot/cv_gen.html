@@ -1,0 +1,175 @@
+{% extends "alphabot/base.html" %}
+
+
+{% block meta %}
+    <meta name="description" content="Generate a professional CV with AlphaBot's AI CV Generator.">
+    <meta name="keywords" content="CV, Resume, Generator, AI, Professional, Job Application">
+    <meta name="author" content="Alphin">
+{% endblock %}
+
+
+
+{% block title %}CV Generator | AlphaBot{% endblock %}
+
+{% block content %}
+
+    <h2>📄 CV Generator</h2>
+    <p class="mb-4">Fill in your details and let AlphaBot create a professional CV for you!</p>
+
+    {% if not user.is_authenticated %}
+      <div class="alert alert-warning mt-4">
+        <strong>Please <a href="{% url 'login' %}">log in</a> to generate a CV.</strong>
+      </div>
+    {% else %}
+      <!-- Place your CV generation form and content here -->
+      <div class="row">
+        <div class="col-md-8">
+            <!-- Form with Animated Steps -->
+            <form id="cv-form" class="mb-4">
+                <!-- Step 1: Personal Info -->
+                <div class="step active animate__animated animate__fadeIn" data-step="1">
+                    <h4 class="mb-3">👤 Personal Information</h4>
+                    <div class="mb-3">
+                        <label class="form-label">Full Name*</label>
+                        <input type="text" id="full-name" class="form-control" required>
+                        <div class="invalid-feedback">Please enter your full name</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Email (must end in @gmail.com)*</label>
+                        <input type="email" id="email" class="form-control" required>
+                        <div class="invalid-feedback">Please enter a valid Gmail address</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">UK Phone Number (starts with 07)*</label>
+                        <input type="tel" id="phone" class="form-control" required>
+                        <div class="invalid-feedback">Must start with 07 and be 11 digits</div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Professional Summary -->
+                <div class="step animate__animated" data-step="2">
+                    <h4 class="mb-3">📝 Professional Summary</h4>
+                    <div class="mb-3">
+                        <label class="form-label">About You*</label>
+                        <textarea id="summary" class="form-control" rows="4" required 
+                                  placeholder="Example: 'Detail-oriented software engineer with 2+ years experience...'"></textarea>
+                        <div class="invalid-feedback">Please write a short summary</div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Skills -->
+                <div class="step animate__animated" data-step="3">
+                    <h4 class="mb-3">🛠 Skills</h4>
+                    <div class="mb-3">
+                        <label class="form-label">Your Skills (comma separated)*</label>
+                        <input type="text" id="skills" class="form-control" required
+                               placeholder="Example: Python, JavaScript, Project Management">
+                        <div class="invalid-feedback">Please list at least 3 skills</div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Experience -->
+                <div class="step animate__animated" data-step="4">
+                    <h4 class="mb-3">💼 Work Experience</h4>
+                    <div class="mb-3">
+                        <label class="form-label">Your Experience*</label>
+                        <textarea id="experience" class="form-control" rows="6" required
+                                  placeholder="Example:
+- Software Developer at TechCo (2020-2023)
+  • Built REST APIs using Django
+  • Improved system performance by 30%"></textarea>
+                        <div class="invalid-feedback">Please describe your experience</div>
+                    </div>
+                </div>
+
+                <!-- Step 5: Education -->
+                <div class="step animate__animated" data-step="5">
+                    <h4 class="mb-3">🎓 Education</h4>
+                    <div class="mb-3">
+                        <label class="form-label">Your Education*</label>
+                        <textarea id="education" class="form-control" rows="4" required
+                                  placeholder="Example:
+- BSc Computer Science, University of London (2018-2021)
+- A-Levels: Maths (A), Physics (B)"></textarea>
+                        <div class="invalid-feedback">Please enter your education</div>
+                    </div>
+                </div>
+
+                <!-- Navigation Controls -->
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-secondary" id="prev-step">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </button>
+                    <button type="button" class="btn btn-primary" id="next-step">
+                        Next <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button type="submit" class="btn btn-success" id="submit-btn" style="display:none">
+                        <i class="fas fa-magic"></i> Generate CV
+                    </button>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="progress mt-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         id="progress-bar" role="progressbar" style="width: 0%"></div>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-md-4">
+            <!-- Success Score Panel -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-chart-line"></i> Success Score
+                </div>
+                <div class="card-body">
+                    <div id="score-container" style="display:none">
+                        <div class="text-center mb-3">
+                            <div class="score-circle mx-auto">
+                                <span id="score-value">0</span>%
+                            </div>
+                        </div>
+                        <div id="score-feedback"></div>
+                    </div>
+                    <p id="score-placeholder" style="color: #5A3E36">Complete your CV to see your success score</p>
+                </div>
+            </div>
+
+            <!-- Tips Panel -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-lightbulb"></i> Pro Tips
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0" style="color: #5A3E36">
+                        <li>Use action verbs (e.g., "Developed", "Led")</li>
+                        <li>Include quantifiable achievements</li>
+                        <li>Keep it concise (1-2 pages)</li>
+                        <li>Tailor to the job description</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CV Output Section -->
+    <div class="mt-4">
+        <div id="cv-action" class="mb-3" style="display: none;">
+            <button id="edit-cv" class="btn btn-warning me-2">
+                <i class="fas fa-edit"></i> Edit CV
+            </button>
+            <button id="download-cv" class="btn btn-primary me-2">
+                <i class="fas fa-file-pdf"></i> Download PDF
+            </button>
+            <button id="copy-cv" class="btn btn-outline-secondary">
+                <i class="fas fa-copy"></i> Copy Text
+            </button>
+        </div>
+
+        <div id="cv-output" class="p-4 border rounded bg-white shadow-sm" style="color: #5A3E36"></div>
+    </div>
+    {% endif %}
+    
+{% endblock %}

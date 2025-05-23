@@ -1,0 +1,26 @@
+{% extends "alphabot/base.html" %}
+{% load static %}
+{% block content %}
+<div class="register-container">
+    <div class="register-card">
+        <div class="logo">
+            <img src="{% static 'alphabot/register_logo.png' %}" alt="AlphaBot Logo">
+        </div>
+        <h2 class="text-center">Register</h2>
+        {% for msg in messages %}
+        <p class="error-message">{{ msg }}</p>
+        {% endfor %}
+        <form method="POST" class="register-form">
+            {% csrf_token %}
+            <input name="username" type="text" placeholder="Username" class="form-input" required>
+            <input name="email" type="email" placeholder="Email" class="form-input" required>
+            <input name="password" type="password" placeholder="Password" class="form-input" required>
+            <input name="confirm" type="password" placeholder="Confirm Password" class="form-input" required>
+            <button type="submit" class="btn-submit">Register</button>
+        </form>
+        <p class="text-center">
+            <a href="{% url 'login' %}" class="link">Already have an account? Login</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

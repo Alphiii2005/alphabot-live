@@ -1,0 +1,45 @@
+{% extends "alphabot/base.html" %}
+
+{% block meta %}
+    <meta name="description" content="Generate a professional CV with AlphaBot's AI CV Generator.">
+    <meta name="keywords" content="CV, Resume, Generator, AI, Professional, Job Application">
+    <meta name="author" content="Alphin">
+{% endblock %}
+
+{% block title %}Paraphraser | AlphaBot{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="mx-auto" style="max-width: 800px;">
+    <div class="bg-light shadow rounded p-4">
+      <h2 class="mb-4 text-center">Paraphrasing Tool ✍️</h2>
+
+      {% if not user.is_authenticated %}
+        <div class="alert alert-warning mt-4 text-center">
+          <strong>Please <a href="{% url 'login' %}">log in</a> to paraphrase.</strong>
+        </div>
+      {% else %}
+      <form id="paraphraser-form">
+        {% csrf_token %}
+        <div class="form-group mb-3">
+          <label for="original_text" class="form-label"><strong>Enter your paragraph:</strong></label>
+          <textarea class="form-control" id="original_text" name="original_text" rows="8" placeholder="Paste your text here..." required></textarea>
+        </div>
+        <div class="d-grid">
+          <button type="submit" class="btn btn-primary btn-lg" style="background-color: #CC5500">Paraphrase</button>
+        </div>
+      </form>
+
+      <div id="loading-spinner" class="mt-3 text-center" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Paraphrasing...</p>
+      </div>
+
+      <div id="paraphrased_result" class="mt-4 p-3 border bg-white rounded" style="min-height: 100px;"></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "alphabot/base.html" %}
+
+{% block title %}Home | AlphaBot{% endblock %}
+
+{% block content %}
+{% if user.is_authenticated %}
+<div class="index-container">
+    <div class="index-card">
+        <h2>Welcome to AlphaBot</h2>
+        <p class="lead">Six Tasks. One AI. Choose your assistant:</p>
+    </div>
+</div>
+{% else %}
+<div class="index-container"></div>
+  <div class="index-card">
+    <h2>Welcome to AlphaBot!</h2>
+    <p>Please <a href="{% url 'login' %}">login</a> or <a href="{% url 'register' %}">register</a> to continue.</p>
+{% endif %}
+  </div>
+</div>  
+<div class="ai-grid">
+    <a href="{% url 'chat' %}" class="ai-card">
+        <h3>🧠 Chat</h3>
+        <p>Talk to AlphaBot for general assistance.</p>
+    </a>
+    <a href="{% url 'cv_gen' %}" class="ai-card">
+        <h3>📄 CV Generator</h3>
+        <p>Enter your personal and professional details to generate a professional CV.</p>
+    </a>
+    <a href="{% url 'content_writer' %}" class="ai-card">
+        <h3>✍️ Content Writer</h3>
+        <p>Generate high-quality blog posts and content.</p>
+    </a>
+    <a href="{% url 'script_writer' %}" class="ai-card">
+        <h3>🎬 Script Writer</h3>
+        <p>Create scripts for YouTube, short films or skits.</p>
+    </a>
+    <a href="{% url 'paraphraser' %}" class="ai-card">
+        <h3>🔁 Paraphraser</h3>
+        <p>Rephrase text while preserving its original meaning.</p>
+    </a>
+    <a href="{% url 'coder' %}" class="ai-card">
+        <h3>💻 Coder</h3>
+        <p>Get help with Python, JavaScript, or any code.</p>
+    </a>
+</div>
+
+{% endblock %}
