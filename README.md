@@ -32,4 +32,38 @@ This project was not just technically challenging — it required *creative prob
 
 ## File Structure
 
-"# alphabot-live" 
+```
+alphabot-deploy/
+│
+├── AI_assistant/
+│   ├── __init__.py
+│   ├── asgi.py
+│   ├── settings.py
+│   ├── urls.py
+│   ├── wsgi.py
+│   └── ...
+│
+├── alphabot/
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── tests.py
+│   ├── views.py
+│   ├── templates/
+│   │   └── ... (HTML templates)
+│   ├── static/
+│   │   └── ... (CSS, JS, images)
+│   └── ...
+│
+├── manage.py
+├── requirements.txt
+├── .env
+└── README.md
+```
+- `AI_assistant/`: Django project configuration (settings, URLs, WSGI/ASGI).
+- `alphabot/`: Main Django app with all business logic, templates, and static files.
+- `manage.py`: Django’s command-line utility.
+- `requirements.txt`: Python dependencies.
+- `.env`: Environment variables (not committed).
+- `README.md`: Project documentation.
