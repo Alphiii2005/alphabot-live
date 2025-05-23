@@ -62,7 +62,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'chatbot.urls'
+ROOT_URLCONF = 'alphabot.urls'
 
 TEMPLATES = [
     {
@@ -79,7 +79,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'chatbot.wsgi.application'
+WSGI_APPLICATION = 'AI_assistant.wsgi.application'
 
 
 # Database
