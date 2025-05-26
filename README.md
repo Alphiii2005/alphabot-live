@@ -17,7 +17,7 @@ The project’s core distinctiveness lies in:
 - **Multiple AI Features**: Not just one feature (like messaging or product listings), but six integrated tools, each powered by custom prompt engineering and AI responses: Chat, CV Generator, Script Writer, Content Writer, Paraphraser, and Code Assistant.
 - **API Integration Struggles**: Originally, I planned to use OpenAI's API for all features. However, due to **pricing restrictions**, I went through multiple stages of iteration:
   - I tested **Hugging Face-hosted** models like `flan-t5-large` and `zephyr-7b-beta` for free-tier use.
-  - Then I moved to **OpenRouter**, which gave access to a wider range of models including **DeepSeek V3** and **Meta’s LLaMA 4 Maverick** — providing both affordability and performance.
+  - Then I moved to **OpenRouter**, which gave access to **DeepSeek V3**  — providing both affordability and performance.
   - This required careful study of each provider’s docs, model response structure, and latency limits, which greatly influenced frontend rendering and backend handling logic.
 - **Frontend-Backend Sync**: JavaScript is used heavily for:
   - Real-time chat interaction (using `fetch()` and dynamic DOM updates),
