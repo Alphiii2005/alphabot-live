@@ -33,30 +33,65 @@ def generate_response(
         "temperature": temperature,
     }
 
-    response = requests.post(
-        OPENROUTER_URL,
-        headers=headers,
-        json=payload,
-        timeout=timeout,
-    )
+    try:
+        response = requests.post(
+            OPENROUTER_URL,
+            headers=headers,
+            json=payload,
+            timeout=timeout,
+        )
+    except requests.Timeout:
+        raise RuntimeError(
+            "AlphaBot took too long to respond. Please try again."
+        )
+    except requests.RequestException:
+        raise RuntimeError(
+            "Unable to connect to the AI service. Please try again later."
+        )
 
     if response.status_code != 200:
         try:
             error_data = response.json()
-            error_message = error_data.get("error", {}).get(
+            error_message = error_data.get(
+                "error",
+                {}
+            ).get(
                 "message",
-                "Unknown OpenRouter error",
+                "The AI service returned an error."
             )
         except ValueError:
-            error_message = response.text
+            error_message = "The AI service returned an invalid response."
 
         raise RuntimeError(
             f"OpenRouter API error {response.status_code}: {error_message}"
         )
 
-    result = response.json()
+    try:
+        result = response.json()
+    except ValueError:
+        raise RuntimeError(
+            "The AI service returned an invalid response."
+        )
 
     try:
-        return result["choices"][0]["message"]["content"]
-    except (KeyError, IndexError):
-        raise RuntimeError("OpenRouter returned an unexpected response.")
+        choices = result.get("choices", [])
+
+        if not choices:
+            raise RuntimeError(
+                "No response was generated. Please try again."
+            )
+
+        message = choices[0].get("message", {})
+        content = message.get("content")
+
+        if not content or not content.strip():
+            raise RuntimeError(
+                "The AI generated an empty response. Please try again."
+            )
+
+        return content.strip()
+
+    except (AttributeError, IndexError, KeyError) as error:
+        raise RuntimeError(
+            "The AI returned an unexpected response. Please try again."
+        ) from error
