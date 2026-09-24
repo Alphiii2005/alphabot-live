@@ -23,6 +23,12 @@ load_dotenv()
 
 OPENROUTER_API_KEY = config("OPENROUTER_API_KEY")
 
+ALPHABOT_DAILY_AI_LIMIT = config(
+    "ALPHABOT_DAILY_AI_LIMIT",
+    default=20,
+    cast=int,
+)
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -47,6 +53,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'rest_framework',
+    'corsheaders',
+    'accounts',
+    'usage',
     'alphabot',
     'django.contrib.staticfiles',
 ]
@@ -55,6 +64,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -62,7 +72,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'alphabot.urls'
+ROOT_URLCONF = 'AI_assistant.urls'
 
 TEMPLATES = [
     {
@@ -93,7 +103,7 @@ DATABASES = {
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "alphabot-rate-limit",
+        "LOCATION": "alphabot-cache",
     }
 }
 
@@ -142,7 +152,20 @@ STATICFILES_DIRS = [BASE_DIR / 'alphabot' / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
+RESEND_API_KEY = config("RESEND_API_KEY")
+
+DEFAULT_FROM_EMAIL = config(
+    "DEFAULT_FROM_EMAIL",
+    default="noreply@alphabot.alphy.com",
+)
+
+EMAIL_VERIFICATION_TIMEOUT = config(
+    "EMAIL_VERIFICATION_TIMEOUT",
+    default=86400,
+    cast=int,
+)
 
 
 # Default primary key field type
@@ -153,3 +176,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+]

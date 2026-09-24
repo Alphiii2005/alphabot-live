@@ -6,8 +6,62 @@ import { useState } from "react";
 export default function RegisterPage() {
   const [lockedOpen, setLockedOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const isExpanded = lockedOpen || hovered;
+
+  async function handleRegister(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+
+    const username = formData.get("username");
+    const email = formData.get("email");
+    const password = formData.get("password");
+    const confirm = formData.get("confirm");
+
+    if (password !== confirm) {
+      alert("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/auth/register/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            username,
+            email,
+            password,
+            confirm,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Registration failed.");
+        return;
+      }
+
+      alert("Account created successfully!");
+
+      window.location.href = "/chat";
+    } catch (error) {
+      console.error("Registration error:", error);
+      alert("Could not connect to AlphaBot.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#09090b] px-6 pt-24 text-white">
@@ -94,7 +148,7 @@ export default function RegisterPage() {
 
             {/* Form */}
             <form
-              onSubmit={(event) => event.preventDefault()}
+              onSubmit={handleRegister}
               className="space-y-4"
             >
               {/* Username */}
@@ -108,6 +162,7 @@ export default function RegisterPage() {
 
                 <input
                   id="register-username"
+                  name="username"
                   type="text"
                   placeholder="alphin"
                   required
@@ -127,6 +182,7 @@ export default function RegisterPage() {
 
                 <input
                   id="register-email"
+                  name="email"
                   type="email"
                   placeholder="you@example.com"
                   required
@@ -146,6 +202,7 @@ export default function RegisterPage() {
 
                 <input
                   id="register-password"
+                  name="password"
                   type="password"
                   placeholder="••••••••"
                   required
@@ -165,6 +222,7 @@ export default function RegisterPage() {
 
                 <input
                   id="register-confirm"
+                  name="confirm"
                   type="password"
                   placeholder="••••••••"
                   required
@@ -176,10 +234,11 @@ export default function RegisterPage() {
               {/* Submit */}
               <button
                 type="submit"
+                disabled={loading}
                 onClick={(event) => event.stopPropagation()}
-                className="mt-2 w-full border-2 border-[#09090b] bg-[#09090b] px-4 py-3.5 text-sm font-extrabold uppercase tracking-[0.08em] text-white shadow-[5px_5px_0_rgba(255,255,255,0.25)] transition hover:translate-x-[1px] hover:translate-y-[1px]"
+                className="mt-2 w-full border-2 border-[#09090b] bg-[#09090b] px-4 py-3.5 text-sm font-extrabold uppercase tracking-[0.08em] text-white shadow-[5px_5px_0_rgba(255,255,255,0.25)] transition hover:translate-x-[1px] hover:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Create AlphaBot
+                {loading ? "Creating..." : "Create AlphaBot"}
               </button>
             </form>
 

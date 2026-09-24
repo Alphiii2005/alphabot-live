@@ -6,8 +6,53 @@ import { useState } from "react";
 export default function LoginPage() {
   const [lockedOpen, setLockedOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const isExpanded = lockedOpen || hovered;
+
+  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+
+    const email = formData.get("email");
+    const password = formData.get("password");
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/auth/login/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            email,
+            password,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Login failed.");
+        return;
+      }
+
+      alert("Login successful!");
+
+      window.location.href = "/chat";
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("Could not connect to AlphaBot.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#09090b] px-6 pt-24 text-white">
@@ -93,7 +138,7 @@ export default function LoginPage() {
 
             {/* Form */}
             <form
-              onSubmit={(event) => event.preventDefault()}
+              onSubmit={handleLogin}
               className="space-y-5"
             >
               <div>
@@ -106,6 +151,7 @@ export default function LoginPage() {
 
                 <input
                   id="login-email"
+                  name="email"
                   type="email"
                   placeholder="you@example.com"
                   required
@@ -124,6 +170,7 @@ export default function LoginPage() {
 
                 <input
                   id="login-password"
+                  name="password"
                   type="password"
                   placeholder="••••••••"
                   required
@@ -134,10 +181,11 @@ export default function LoginPage() {
 
               <button
                 type="submit"
+                disabled={loading}
                 onClick={(event) => event.stopPropagation()}
-                className="w-full border-2 border-[#09090b] bg-[#09090b] px-4 py-3.5 text-sm font-extrabold uppercase tracking-[0.08em] text-white shadow-[5px_5px_0_rgba(255,255,255,0.25)] transition hover:translate-x-[1px] hover:translate-y-[1px]"
+                className="w-full border-2 border-[#09090b] bg-[#09090b] px-4 py-3.5 text-sm font-extrabold uppercase tracking-[0.08em] text-white shadow-[5px_5px_0_rgba(255,255,255,0.25)] transition hover:translate-x-[1px] hover:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Enter AlphaBot
+                {loading ? "Signing in..." : "Enter AlphaBot"}
               </button>
             </form>
 
