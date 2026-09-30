@@ -6,44 +6,17 @@ import ToolCard from "./ToolsCard";
 const tools = [
   {
     title: "AI Chat",
-    description: "Talk with AlphaBot and get help with almost anything.",
+    description:
+      "Chat with AlphaBot to explore ideas, solve problems and get things done.",
     icon: "•••",
     href: "/chat",
   },
   {
-    title: "Coder",
+    title: "CV Creator",
     description:
-      "Write, debug and understand code with your AI coding assistant.",
-    icon: "</>",
-    href: "/coder",
-  },
-  {
-    title: "CV Generator",
-    description:
-      "Create professional and ATS-friendly CVs in seconds.",
+      "Build a professional, ATS-friendly CV tailored to the role you're applying for.",
     icon: "CV",
     href: "/cv",
-  },
-  {
-    title: "Content Writer",
-    description:
-      "Turn ideas into articles, posts and useful written content.",
-    icon: "✦",
-    href: "/writer",
-  },
-  {
-    title: "Script Writer",
-    description:
-      "Create scripts for YouTube videos, short films and more.",
-    icon: "▶",
-    href: "/script",
-  },
-  {
-    title: "Paraphraser",
-    description:
-      "Rewrite and improve your text while keeping its meaning.",
-    icon: "↻",
-    href: "/paraphraser",
   },
 ];
 
@@ -71,7 +44,7 @@ export default function Tools() {
       id="tools"
       className="relative px-6 py-32"
     >
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-5xl">
 
         {/* Section heading */}
         <div className="mb-20 text-center">
@@ -79,7 +52,7 @@ export default function Tools() {
           {/* Badge */}
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-purple-400/20 bg-purple-500/5 px-5 py-2 text-sm text-purple-300 backdrop-blur-xl">
             <span>✦</span>
-            AlphaBot Tools
+            αlphaBot Tools
           </div>
 
           {/* Heading */}
@@ -92,14 +65,13 @@ export default function Tools() {
 
           {/* Description */}
           <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-zinc-400">
-            Everything you need to think, create, code and bring your ideas
-            to life.
+            Simple tools designed to help you turn ideas into something real.
           </p>
 
         </div>
 
         {/* Tool grid */}
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mx-auto grid max-w-3xl gap-5 sm:grid-cols-2">
           {tools.map((tool) => (
             <ToolCard
               key={tool.title}

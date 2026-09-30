@@ -2,33 +2,69 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { APIError, apiFetch } from "@/lib/api";
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+
   const [lockedOpen, setLockedOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(
+    null
+  );
+  const [success, setSuccess] = useState<string | null>(
+    null
+  );
 
   const isExpanded = lockedOpen || hovered;
 
-  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
+  const nextPath =
+    searchParams.get("next") || "/chat";
+
+  const safeNextPath =
+    nextPath.startsWith("/") &&
+    !nextPath.startsWith("//")
+      ? nextPath
+      : "/chat";
+
+  async function handleLogin(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
 
-    const formData = new FormData(event.currentTarget);
+    if (loading) return;
 
-    const email = formData.get("email");
-    const password = formData.get("password");
-
+    setError(null);
+    setSuccess(null);
     setLoading(true);
 
+    const formData = new FormData(
+      event.currentTarget
+    );
+
+    const email = String(
+      formData.get("email") || ""
+    ).trim();
+
+    const password = String(
+      formData.get("password") || ""
+    );
+
+    if (!email || !password) {
+      setError(
+        "Please enter your email and password."
+      );
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/auth/login/",
+      const data = await apiFetch(
+        "/api/auth/login/",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
           body: JSON.stringify({
             email,
             password,
@@ -36,19 +72,47 @@ export default function LoginPage() {
         }
       );
 
-      const data = await response.json();
+      setSuccess(
+        data?.message ||
+          "Login successful. Welcome back."
+      );
 
-      if (!response.ok) {
-        alert(data.error || "Login failed.");
-        return;
-      }
-
-      alert("Login successful!");
-
-      window.location.href = "/chat";
+      window.setTimeout(() => {
+        window.location.href = safeNextPath;
+      }, 500);
     } catch (error) {
-      console.error("Login error:", error);
-      alert("Could not connect to AlphaBot.");
+      if (
+        error instanceof APIError &&
+        error.status === 401
+      ) {
+        setError(
+          error.data?.code ===
+            "EMAIL_NOT_VERIFIED"
+            ? "Please verify your email before logging in. Check your inbox for your verification link."
+            : error.message ||
+                "Your email or password is incorrect."
+        );
+      } else if (
+        error instanceof APIError &&
+        error.status === 403
+      ) {
+        setError(
+          "You don't currently have permission to log in. Please verify your email and try again."
+        );
+      } else if (
+        error instanceof APIError &&
+        error.status === 429
+      ) {
+        setError(
+          "Too many login attempts. Please wait a moment and try again."
+        );
+      } else {
+        setError(
+          error instanceof Error
+            ? error.message
+            : "We couldn't log you in. Please try again."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -63,28 +127,34 @@ export default function LoginPage() {
           onClick={() => setLockedOpen(true)}
           className={`group relative w-full cursor-pointer overflow-hidden border-4 border-[#09090b] bg-gradient-to-br from-purple-600 via-purple-600 to-indigo-700 transition-all duration-500 ${
             isExpanded
-              ? "h-[500px] -translate-y-1 rotate-x-[2deg] rotate-y-[-2deg] shadow-[12px_12px_0_#050505,20px_20px_0_rgba(124,58,237,0.18),0_0_40px_rgba(124,58,237,0.15)]"
+              ? "h-[560px] -translate-y-1 rotate-x-[2deg] rotate-y-[-2deg] shadow-[12px_12px_0_#050505,20px_20px_0_rgba(124,58,237,0.18),0_0_40px_rgba(124,58,237,0.15)]"
               : "h-[110px] shadow-[8px_8px_0_#050505,16px_16px_0_rgba(124,58,237,0.12)] hover:-translate-y-1"
           }`}
         >
           {/* Shine */}
           <div
             className={`pointer-events-none absolute inset-y-0 -left-full z-30 w-[60%] skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-all duration-700 ${
-              isExpanded ? "left-[140%]" : ""
+              isExpanded
+                ? "left-[140%]"
+                : ""
             }`}
           />
 
           {/* Corner triangle */}
           <div
             className={`absolute right-[-4px] top-[-4px] z-40 h-14 w-14 transition-all duration-500 [clip-path:polygon(0_0,100%_0,100%_100%)] ${
-              isExpanded ? "bg-[#DDD6FE]" : "bg-[#09090b]"
+              isExpanded
+                ? "bg-[#DDD6FE]"
+                : "bg-[#09090b]"
             }`}
           />
 
           {/* Decorative line */}
           <div
             className={`absolute left-7 top-7 h-[3px] transition-all duration-500 ${
-              isExpanded ? "w-16 bg-white/50" : "w-12 bg-white/30"
+              isExpanded
+                ? "w-16 bg-white/50"
+                : "w-12 bg-white/30"
             }`}
           />
 
@@ -136,6 +206,21 @@ export default function LoginPage() {
               </p>
             </div>
 
+            {/* Feedback */}
+            {(error || success) && (
+              <div
+                role="status"
+                aria-live="polite"
+                className={`mb-5 border-2 px-4 py-3 text-sm font-medium ${
+                  error
+                    ? "border-red-950/40 bg-red-950/25 text-red-100"
+                    : "border-green-950/40 bg-green-950/25 text-green-100"
+                }`}
+              >
+                {error || success}
+              </div>
+            )}
+
             {/* Form */}
             <form
               onSubmit={handleLogin}
@@ -154,9 +239,13 @@ export default function LoginPage() {
                   name="email"
                   type="email"
                   placeholder="you@example.com"
+                  autoComplete="email"
                   required
-                  onClick={(event) => event.stopPropagation()}
-                  className="w-full border-2 border-[#09090b] bg-[#f5f5f5] px-4 py-3.5 text-sm font-bold text-[#09090b] shadow-[5px_5px_0_#09090b] outline-none placeholder:text-zinc-400 focus:bg-white"
+                  disabled={loading}
+                  onClick={(event) =>
+                    event.stopPropagation()
+                  }
+                  className="w-full border-2 border-[#09090b] bg-[#f5f5f5] px-4 py-3.5 text-sm font-bold text-[#09090b] shadow-[5px_5px_0_#09090b] outline-none placeholder:text-zinc-400 focus:bg-white disabled:cursor-not-allowed disabled:opacity-70"
                 />
               </div>
 
@@ -173,19 +262,27 @@ export default function LoginPage() {
                   name="password"
                   type="password"
                   placeholder="••••••••"
+                  autoComplete="current-password"
                   required
-                  onClick={(event) => event.stopPropagation()}
-                  className="w-full border-2 border-[#09090b] bg-[#f5f5f5] px-4 py-3.5 text-sm font-bold text-[#09090b] shadow-[5px_5px_0_#09090b] outline-none placeholder:text-zinc-400 focus:bg-white"
+                  disabled={loading}
+                  onClick={(event) =>
+                    event.stopPropagation()
+                  }
+                  className="w-full border-2 border-[#09090b] bg-[#f5f5f5] px-4 py-3.5 text-sm font-bold text-[#09090b] shadow-[5px_5px_0_#09090b] outline-none placeholder:text-zinc-400 focus:bg-white disabled:cursor-not-allowed disabled:opacity-70"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                onClick={(event) => event.stopPropagation()}
+                onClick={(event) =>
+                  event.stopPropagation()
+                }
                 className="w-full border-2 border-[#09090b] bg-[#09090b] px-4 py-3.5 text-sm font-extrabold uppercase tracking-[0.08em] text-white shadow-[5px_5px_0_rgba(255,255,255,0.25)] transition hover:translate-x-[1px] hover:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loading ? "Signing in..." : "Enter AlphaBot"}
+                {loading
+                  ? "Signing in..."
+                  : "Enter AlphaBot"}
               </button>
             </form>
 
@@ -195,7 +292,9 @@ export default function LoginPage() {
                 No account?{" "}
                 <Link
                   href="/register"
-                  onClick={(event) => event.stopPropagation()}
+                  onClick={(event) =>
+                    event.stopPropagation()
+                  }
                   className="font-extrabold text-white underline underline-offset-2 transition hover:text-purple-200"
                 >
                   Create one

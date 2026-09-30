@@ -1,9 +1,11 @@
 type ChatHeaderProps = {
   onNewChat: () => void;
+  disabled?: boolean;
 };
 
 export default function ChatHeader({
   onNewChat,
+  disabled = false,
 }: ChatHeaderProps) {
   return (
     <div className="mb-8 flex items-center justify-between">
@@ -18,10 +20,12 @@ export default function ChatHeader({
       </div>
 
       <button
+        type="button"
         onClick={onNewChat}
-        className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-zinc-400 transition hover:bg-white/[0.08] hover:text-white"
+        disabled={disabled}
+        className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-zinc-400 transition hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
       >
-        New chat
+        {disabled ? "Starting..." : "New chat"}
       </button>
     </div>
   );

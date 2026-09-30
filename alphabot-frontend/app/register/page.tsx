@@ -2,62 +2,124 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { APIError, apiFetch } from "@/lib/api";
 
 export default function RegisterPage() {
   const [lockedOpen, setLockedOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(
+    null
+  );
+  const [success, setSuccess] = useState<string | null>(
+    null
+  );
 
   const isExpanded = lockedOpen || hovered;
 
-  async function handleRegister(event: React.FormEvent<HTMLFormElement>) {
+  async function handleRegister(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
 
-    const formData = new FormData(event.currentTarget);
+    if (loading) return;
 
-    const username = formData.get("username");
-    const email = formData.get("email");
-    const password = formData.get("password");
-    const confirm = formData.get("confirm");
+    setError(null);
+    setSuccess(null);
+
+    const formData = new FormData(
+      event.currentTarget
+    );
+
+    const username = String(
+      formData.get("username") || ""
+    ).trim();
+
+    const email = String(
+      formData.get("email") || ""
+    ).trim();
+
+    const password = String(
+      formData.get("password") || ""
+    );
+
+    const confirm = String(
+      formData.get("confirm") || ""
+    );
+
+    if (!username || !email || !password || !confirm) {
+      setError(
+        "Please complete all the fields before creating your account."
+      );
+      return;
+    }
 
     if (password !== confirm) {
-      alert("Passwords do not match.");
+      setError("Your passwords do not match.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError(
+        "Your password must be at least 8 characters long."
+      );
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/auth/register/",
+      const data = await apiFetch(
+        "/api/auth/register/",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
           body: JSON.stringify({
             username,
             email,
             password,
-            confirm,
+            confirm_password: confirm,
           }),
         }
       );
 
-      const data = await response.json();
+      setSuccess(
+        data?.message ||
+          "Your account has been created. Check your email to verify your account."
+      );
 
-      if (!response.ok) {
-        alert(data.error || "Registration failed.");
-        return;
-      }
-
-      alert("Account created successfully!");
-
-      window.location.href = "/chat";
+      event.currentTarget.reset();
     } catch (error) {
-      console.error("Registration error:", error);
-      alert("Could not connect to AlphaBot.");
+      if (error instanceof APIError) {
+        const backendErrors =
+          error.data?.errors ||
+          error.data?.field_errors;
+
+        if (
+          backendErrors &&
+          typeof backendErrors === "object"
+        ) {
+          const firstError = Object.values(
+            backendErrors
+          )[0];
+
+          if (Array.isArray(firstError)) {
+            setError(String(firstError[0]));
+          } else {
+            setError(String(firstError));
+          }
+        } else {
+          setError(
+            error.message ||
+              "We couldn't create your account. Please check your details and try again."
+          );
+        }
+      } else {
+        setError(
+          error instanceof Error
+            ? error.message
+            : "We couldn't create your account. Please try again."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -73,28 +135,34 @@ export default function RegisterPage() {
           onClick={() => setLockedOpen(true)}
           className={`group relative w-full cursor-pointer overflow-hidden border-4 border-[#09090b] bg-gradient-to-br from-indigo-600 via-purple-600 to-purple-700 transition-all duration-500 ${
             isExpanded
-              ? "h-[680px] -translate-y-1 rotate-x-[2deg] rotate-y-[-2deg] shadow-[12px_12px_0_#050505,20px_20px_0_rgba(124,58,237,0.18),0_0_40px_rgba(124,58,237,0.15)]"
+              ? "h-[760px] -translate-y-1 rotate-x-[2deg] rotate-y-[-2deg] shadow-[12px_12px_0_#050505,20px_20px_0_rgba(124,58,237,0.18),0_0_40px_rgba(124,58,237,0.15)]"
               : "h-[110px] shadow-[8px_8px_0_#050505,16px_16px_0_rgba(124,58,237,0.12)] hover:-translate-y-1"
           }`}
         >
           {/* Shine */}
           <div
             className={`pointer-events-none absolute inset-y-0 -left-full z-30 w-[60%] skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-all duration-700 ${
-              isExpanded ? "left-[140%]" : ""
+              isExpanded
+                ? "left-[140%]"
+                : ""
             }`}
           />
 
           {/* Corner Triangle */}
           <div
             className={`absolute right-[-4px] top-[-4px] z-40 h-14 w-14 transition-all duration-500 [clip-path:polygon(0_0,100%_0,100%_100%)] ${
-              isExpanded ? "bg-[#DDD6FE]" : "bg-[#09090b]"
+              isExpanded
+                ? "bg-[#DDD6FE]"
+                : "bg-[#09090b]"
             }`}
           />
 
           {/* Decorative Line */}
           <div
             className={`absolute left-7 top-7 h-[3px] transition-all duration-500 ${
-              isExpanded ? "w-16 bg-white/50" : "w-12 bg-white/30"
+              isExpanded
+                ? "w-16 bg-white/50"
+                : "w-12 bg-white/30"
             }`}
           />
 
@@ -146,6 +214,21 @@ export default function RegisterPage() {
               </p>
             </div>
 
+            {/* Feedback */}
+            {(error || success) && (
+              <div
+                role="status"
+                aria-live="polite"
+                className={`mb-5 border-2 px-4 py-3 text-sm font-medium ${
+                  error
+                    ? "border-red-950/40 bg-red-950/25 text-red-100"
+                    : "border-green-950/40 bg-green-950/25 text-green-100"
+                }`}
+              >
+                {error || success}
+              </div>
+            )}
+
             {/* Form */}
             <form
               onSubmit={handleRegister}
@@ -165,9 +248,13 @@ export default function RegisterPage() {
                   name="username"
                   type="text"
                   placeholder="alphin"
+                  autoComplete="username"
                   required
-                  onClick={(event) => event.stopPropagation()}
-                  className="w-full border-2 border-[#09090b] bg-[#f5f5f5] px-4 py-3.5 text-sm font-bold text-[#09090b] shadow-[5px_5px_0_#09090b] outline-none placeholder:text-zinc-400 focus:bg-white"
+                  disabled={loading}
+                  onClick={(event) =>
+                    event.stopPropagation()
+                  }
+                  className="w-full border-2 border-[#09090b] bg-[#f5f5f5] px-4 py-3.5 text-sm font-bold text-[#09090b] shadow-[5px_5px_0_#09090b] outline-none placeholder:text-zinc-400 focus:bg-white disabled:cursor-not-allowed disabled:opacity-70"
                 />
               </div>
 
@@ -185,9 +272,13 @@ export default function RegisterPage() {
                   name="email"
                   type="email"
                   placeholder="you@example.com"
+                  autoComplete="email"
                   required
-                  onClick={(event) => event.stopPropagation()}
-                  className="w-full border-2 border-[#09090b] bg-[#f5f5f5] px-4 py-3.5 text-sm font-bold text-[#09090b] shadow-[5px_5px_0_#09090b] outline-none placeholder:text-zinc-400 focus:bg-white"
+                  disabled={loading}
+                  onClick={(event) =>
+                    event.stopPropagation()
+                  }
+                  className="w-full border-2 border-[#09090b] bg-[#f5f5f5] px-4 py-3.5 text-sm font-bold text-[#09090b] shadow-[5px_5px_0_#09090b] outline-none placeholder:text-zinc-400 focus:bg-white disabled:cursor-not-allowed disabled:opacity-70"
                 />
               </div>
 
@@ -205,9 +296,13 @@ export default function RegisterPage() {
                   name="password"
                   type="password"
                   placeholder="••••••••"
+                  autoComplete="new-password"
                   required
-                  onClick={(event) => event.stopPropagation()}
-                  className="w-full border-2 border-[#09090b] bg-[#f5f5f5] px-4 py-3.5 text-sm font-bold text-[#09090b] shadow-[5px_5px_0_#09090b] outline-none placeholder:text-zinc-400 focus:bg-white"
+                  disabled={loading}
+                  onClick={(event) =>
+                    event.stopPropagation()
+                  }
+                  className="w-full border-2 border-[#09090b] bg-[#f5f5f5] px-4 py-3.5 text-sm font-bold text-[#09090b] shadow-[5px_5px_0_#09090b] outline-none placeholder:text-zinc-400 focus:bg-white disabled:cursor-not-allowed disabled:opacity-70"
                 />
               </div>
 
@@ -225,9 +320,13 @@ export default function RegisterPage() {
                   name="confirm"
                   type="password"
                   placeholder="••••••••"
+                  autoComplete="new-password"
                   required
-                  onClick={(event) => event.stopPropagation()}
-                  className="w-full border-2 border-[#09090b] bg-[#f5f5f5] px-4 py-3.5 text-sm font-bold text-[#09090b] shadow-[5px_5px_0_#09090b] outline-none placeholder:text-zinc-400 focus:bg-white"
+                  disabled={loading}
+                  onClick={(event) =>
+                    event.stopPropagation()
+                  }
+                  className="w-full border-2 border-[#09090b] bg-[#f5f5f5] px-4 py-3.5 text-sm font-bold text-[#09090b] shadow-[5px_5px_0_#09090b] outline-none placeholder:text-zinc-400 focus:bg-white disabled:cursor-not-allowed disabled:opacity-70"
                 />
               </div>
 
@@ -235,20 +334,34 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={loading}
-                onClick={(event) => event.stopPropagation()}
+                onClick={(event) =>
+                  event.stopPropagation()
+                }
                 className="mt-2 w-full border-2 border-[#09090b] bg-[#09090b] px-4 py-3.5 text-sm font-extrabold uppercase tracking-[0.08em] text-white shadow-[5px_5px_0_rgba(255,255,255,0.25)] transition hover:translate-x-[1px] hover:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loading ? "Creating..." : "Create AlphaBot"}
+                {loading
+                  ? "Creating..."
+                  : "Create AlphaBot"}
               </button>
             </form>
 
+            {/* Verification message */}
+            <div className="mt-5 text-center">
+              <p className="text-[11px] leading-5 text-white/45">
+                After creating your account, we'll send
+                you a verification link by email.
+              </p>
+            </div>
+
             {/* Login Link */}
-            <div className="mt-6 text-center">
+            <div className="mt-5 text-center">
               <p className="text-xs text-white/55">
                 Already have an account?{" "}
                 <Link
                   href="/login"
-                  onClick={(event) => event.stopPropagation()}
+                  onClick={(event) =>
+                    event.stopPropagation()
+                  }
                   className="font-extrabold text-white underline underline-offset-2 transition hover:text-purple-200"
                 >
                   Sign in

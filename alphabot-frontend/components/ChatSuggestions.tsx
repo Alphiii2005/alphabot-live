@@ -5,25 +5,30 @@ type ChatSuggestionsProps = {
 const suggestions = [
   {
     title: "Explain something",
-    description: "Make a difficult topic easy to understand.",
+    description:
+      "Make a difficult topic easy to understand.",
     icon: "💡",
-    prompt: "Explain something to me in simple terms",
+    prompt:
+      "Explain something to me in simple terms",
   },
   {
     title: "Write something",
-    description: "Create, rewrite or improve your writing.",
+    description:
+      "Create, rewrite or improve your writing.",
     icon: "✍️",
     prompt: "Help me write something",
   },
   {
     title: "Help with code",
-    description: "Debug, explain or improve your code.",
+    description:
+      "Debug, explain or improve your code.",
     icon: "</>",
     prompt: "Help me with some code",
   },
   {
     title: "Brainstorm ideas",
-    description: "Explore ideas and solve problems together.",
+    description:
+      "Explore ideas and solve problems together.",
     icon: "✦",
     prompt: "Give me some ideas",
   },
@@ -37,11 +42,19 @@ export default function ChatSuggestions({
       {suggestions.map((suggestion) => (
         <button
           key={suggestion.title}
+          type="button"
           onClick={() => onSelect(suggestion.prompt)}
-          className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-left transition hover:-translate-y-1 hover:border-purple-400/30 hover:bg-white/[0.06]"
+          aria-label={`Use suggestion: ${suggestion.title}`}
+          className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-left transition duration-300 hover:-translate-y-1 hover:border-purple-400/30 hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-purple-400/40"
         >
           <p className="text-sm font-medium text-white">
-            <span className="mr-2">{suggestion.icon}</span>
+            <span
+              className="mr-2"
+              aria-hidden="true"
+            >
+              {suggestion.icon}
+            </span>
+
             {suggestion.title}
           </p>
 

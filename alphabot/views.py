@@ -1,7 +1,7 @@
 import json
 import re
+from functools import wraps
 
-from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.http import JsonResponse
@@ -17,11 +17,31 @@ from .ai.quota import (
 
 
 # ============================================================
+# AUTHENTICATION
+# ============================================================
+
+def api_login_required(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {
+                    "error": "Authentication required.",
+                    "code": "AUTH_REQUIRED",
+                },
+                status=401,
+            )
+
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
+
+
+# ============================================================
 # CONFIG
 # ============================================================
 
 GENERAL_MODEL = "openrouter/free"
-CODER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
 
 
 # ============================================================
@@ -29,7 +49,12 @@ CODER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
 # ============================================================
 
 def validate_uk_phone(phone):
-    phone = phone.strip().replace(" ", "").replace("-", "")
+    phone = (
+        phone
+        .strip()
+        .replace(" ", "")
+        .replace("-", "")
+    )
 
     if phone.startswith("+44"):
         phone = "0" + phone[3:]
@@ -44,14 +69,20 @@ def validate_custom_email(email):
     validate_email(email)
 
     if len(email) > 254:
-        raise ValidationError("Email is too long.")
+        raise ValidationError(
+            "Email is too long."
+        )
 
 
 # ============================================================
 # HELPERS
 # ============================================================
 
-def get_recent_history(user, chat_type="chat", limit=20):
+def get_recent_history(
+    user,
+    chat_type="chat",
+    limit=20,
+):
     messages = (
         Message.objects
         .filter(
@@ -79,17 +110,62 @@ def get_recent_history(user, chat_type="chat", limit=20):
 def ai_error_response(error):
     return JsonResponse(
         {
-            "error": str(error)
+            "error": str(error),
         },
         status=500,
     )
+
+
+def clean_ai_json(content):
+    """
+    Clean common Markdown wrappers around JSON returned by AI.
+    """
+
+    if not content:
+        return ""
+
+    content = content.strip()
+
+    if content.startswith("```"):
+        content = re.sub(
+            r"^```(?:json)?\s*",
+            "",
+            content,
+            flags=re.IGNORECASE,
+        )
+
+        content = re.sub(
+            r"\s*```$",
+            "",
+            content,
+        )
+
+    return content.strip()
+
+
+def safe_list(value):
+    """
+    Ensure AI list fields always become Python lists.
+    """
+
+    if isinstance(value, list):
+        return [
+            str(item).strip()
+            for item in value
+            if str(item).strip()
+        ]
+
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+
+    return []
 
 
 # ============================================================
 # QUOTA
 # ============================================================
 
-@login_required
+@api_login_required
 def quota_api(request):
     return JsonResponse(
         get_usage(request.user)
@@ -101,30 +177,37 @@ def quota_api(request):
 # ============================================================
 
 @csrf_exempt
-@login_required
+@api_login_required
 def ai_chat_api(request):
 
     if request.method != "POST":
         return JsonResponse(
-            {"error": "POST method required."},
+            {
+                "error": "POST method required.",
+            },
             status=405,
         )
 
     try:
         data = json.loads(request.body)
-
     except json.JSONDecodeError:
         return JsonResponse(
-            {"error": "Invalid JSON."},
+            {
+                "error": "Invalid JSON.",
+            },
             status=400,
         )
 
-    user_message = data.get("message", "").strip()
-    command = data.get("command", "normal").strip().lower()
+    user_message = data.get(
+        "message",
+        "",
+    ).strip()
 
     if not user_message:
         return JsonResponse(
-            {"error": "Message required."},
+            {
+                "error": "Message required.",
+            },
             status=400,
         )
 
@@ -137,21 +220,73 @@ def ai_chat_api(request):
         "script",
     }
 
-    if command not in allowed_commands:
-        return JsonResponse(
-            {
-                "error": (
-                    f"Unknown command. "
-                    f"Allowed commands: "
-                    f"{', '.join(sorted(allowed_commands))}."
-                )
-            },
-            status=400,
+    command = "normal"
+
+    if user_message.startswith("/"):
+        parts = user_message.split(
+            maxsplit=1
         )
 
-    # --------------------------------------------------------
-    # Reserve quota
-    # --------------------------------------------------------
+        command_name = (
+            parts[0][1:]
+            .strip()
+            .lower()
+        )
+
+        if command_name in allowed_commands:
+            command = command_name
+
+            user_message = (
+                parts[1].strip()
+                if len(parts) > 1
+                else ""
+            )
+
+            if not user_message:
+                return JsonResponse(
+                    {
+                        "error": (
+                            f"Please provide some text "
+                            f"after /{command}."
+                        ),
+                    },
+                    status=400,
+                )
+
+        else:
+            return JsonResponse(
+                {
+                    "error": (
+                        f"Unknown command: /{command_name}. "
+                        "Available commands: "
+                        "/normal, /rewrite, /humanise, "
+                        "/code, /formalise, /script."
+                    ),
+                },
+                status=400,
+            )
+
+    elif data.get("command"):
+
+        requested_command = (
+            str(data.get("command"))
+            .strip()
+            .lower()
+        )
+
+        if requested_command not in allowed_commands:
+            return JsonResponse(
+                {
+                    "error": (
+                        "Unknown command. "
+                        f"Allowed commands: "
+                        f"{', '.join(sorted(allowed_commands))}."
+                    ),
+                },
+                status=400,
+            )
+
+        command = requested_command
 
     if not reserve_quota(request.user):
         usage = get_usage(request.user)
@@ -171,10 +306,6 @@ def ai_chat_api(request):
             chat_type="chat",
             limit=20,
         )
-
-        # ----------------------------------------------------
-        # Command-specific behaviour
-        # ----------------------------------------------------
 
         system_prompts = {
 
@@ -283,12 +414,6 @@ Follow the user's requested format and tone.
             }
         )
 
-        model = (
-            CODER_MODEL
-            if command == "code"
-            else GENERAL_MODEL
-        )
-
         temperature = {
             "normal": 0.7,
             "rewrite": 0.5,
@@ -300,13 +425,9 @@ Follow the user's requested format and tone.
 
         bot_reply = generate_response(
             messages=messages,
-            model=model,
+            model=GENERAL_MODEL,
             temperature=temperature,
         )
-
-        # ----------------------------------------------------
-        # Save successful conversation
-        # ----------------------------------------------------
 
         Message.objects.create(
             user=request.user,
@@ -334,7 +455,6 @@ Follow the user's requested format and tone.
 
     except Exception as error:
 
-        # AI failed, so return the quota.
         release_quota(request.user)
 
         return ai_error_response(error)
@@ -344,7 +464,7 @@ Follow the user's requested format and tone.
 # CHAT HISTORY
 # ============================================================
 
-@login_required
+@api_login_required
 def chat_history(request):
 
     messages = (
@@ -377,12 +497,14 @@ def chat_history(request):
 # ============================================================
 
 @csrf_exempt
-@login_required
+@api_login_required
 def reset_chat(request):
 
     if request.method != "POST":
         return JsonResponse(
-            {"error": "POST method required."},
+            {
+                "error": "POST method required.",
+            },
             status=405,
         )
 
@@ -400,21 +522,23 @@ def reset_chat(request):
 
 
 # ============================================================
-# CV GENERATOR
+# CV GENERATOR + AI ANALYSIS
 # ============================================================
 
 @csrf_exempt
-@login_required
+@api_login_required
 def generate_cv(request):
 
     if request.method != "POST":
         return JsonResponse(
-            {"error": "POST method required."},
+            {
+                "error": "POST method required.",
+            },
             status=405,
         )
 
     # --------------------------------------------------------
-    # Reserve shared AI quota
+    # Reserve ONE shared AI quota
     # --------------------------------------------------------
 
     if not reserve_quota(request.user):
@@ -430,7 +554,26 @@ def generate_cv(request):
 
     try:
 
-        data = json.loads(request.body)
+        # ----------------------------------------------------
+        # Parse request
+        # ----------------------------------------------------
+
+        try:
+            data = json.loads(request.body)
+
+        except json.JSONDecodeError:
+            release_quota(request.user)
+
+            return JsonResponse(
+                {
+                    "error": "Invalid JSON data.",
+                },
+                status=400,
+            )
+
+        # ----------------------------------------------------
+        # Required fields
+        # ----------------------------------------------------
 
         required_fields = {
             "fullName": "",
@@ -451,25 +594,144 @@ def generate_cv(request):
                     {
                         "error": (
                             f"Missing required field: {field}"
-                        )
+                        ),
                     },
                     status=400,
                 )
 
-            required_fields[field] = (
-                str(data[field]).strip()
+            required_fields[field] = str(
+                data[field]
+            ).strip()
+
+        # ----------------------------------------------------
+        # Optional fields
+        # ----------------------------------------------------
+
+        target_role = str(
+            data.get("targetRole", "")
+        ).strip()
+
+        job_description = str(
+            data.get("jobDescription", "")
+        ).strip()
+
+        projects = str(
+            data.get("projects", "")
+        ).strip()
+
+        certifications = str(
+            data.get("certification", "")
+        ).strip()
+
+        # ----------------------------------------------------
+        # Target role
+        # ----------------------------------------------------
+
+        if not target_role:
+            release_quota(request.user)
+
+            return JsonResponse(
+                {
+                    "error": (
+                        "Please provide the job role "
+                        "you are targeting."
+                    ),
+                },
+                status=400,
             )
+
+        # ----------------------------------------------------
+        # Validate email
+        # ----------------------------------------------------
 
         validate_custom_email(
             required_fields["email"]
         )
 
+        # ----------------------------------------------------
+        # Validate UK phone
+        # ----------------------------------------------------
+
         validate_uk_phone(
             required_fields["phone"]
         )
 
+        # ----------------------------------------------------
+        # Job context
+        # ----------------------------------------------------
+
+        if job_description:
+
+            job_context = f"""
+Target Job Role:
+{target_role}
+
+Job Description:
+{job_description}
+"""
+
+        else:
+
+            job_context = f"""
+Target Job Role:
+{target_role}
+
+No specific job description was provided.
+
+Analyse the CV against common expectations,
+skills and responsibilities for this target role.
+
+Do not invent requirements from a specific employer.
+"""
+
+        # ----------------------------------------------------
+        # Optional sections
+        # ----------------------------------------------------
+
+        if projects:
+
+            projects_section = f"""
+Projects:
+{projects}
+"""
+
+        else:
+
+            projects_section = """
+Projects:
+[NOT PROVIDED]
+"""
+
+        if certifications:
+
+            certifications_section = f"""
+Certifications:
+{certifications}
+"""
+
+        else:
+
+            certifications_section = """
+Certifications:
+[NOT PROVIDED]
+"""
+
+        # ----------------------------------------------------
+        # CV GENERATION + ANALYSIS PROMPT
+        # ----------------------------------------------------
+
         prompt = f"""
-Generate a professional CV using the following information.
+You are AlphaBot's professional CV creator and ATS analyst.
+
+Your task is to create a clean, professional, truthful,
+ATS-friendly CV and then analyse that CV for the user's
+target role.
+
+The user's information is the ONLY source of truth.
+
+============================================================
+USER INFORMATION
+============================================================
 
 Name:
 {required_fields['fullName']}
@@ -492,41 +754,380 @@ Work Experience:
 Education:
 {required_fields['education']}
 
-Certifications:
-{data.get('certification', 'N/A')}
+{projects_section}
 
-Requirements:
+{certifications_section}
 
-- Use Markdown only.
-- Do not use HTML.
-- Use clear section headings.
-- Use bullet points.
-- Keep the CV concise.
-- Target approximately 1-2 pages.
-- Optimize for ATS systems.
-- Use strong professional language.
-- Include measurable achievements where appropriate.
+{job_context}
+
+============================================================
+CV STRUCTURE
+============================================================
+
+The CV must follow this professional order:
+
+1. Name and contact information
+2. Professional Summary
+3. Skills
+4. Work Experience
+5. Education
+6. Projects
+7. Certifications
+
+However, ONLY include a section when the user actually
+provided information for that section.
+
+For example:
+
+If Projects is [NOT PROVIDED]:
+
+DO NOT output:
+
+## Projects
+
+Do not output an empty heading.
+Do not output "None".
+Do not output "N/A".
+Do not output placeholder text.
+
+Simply omit the Projects section completely.
+
+The same rule applies to Certifications and every other
+optional section.
+
+============================================================
+CONTACT HEADER
+============================================================
+
+The beginning of the CV should be compact and professional.
+
+Use:
+
+# Full Name
+
+Then place the user's actual contact information directly
+under the name.
+
+Example:
+
+# Alex Smith
+
+alex@example.com | +44 7000 000000
+
+Do not invent:
+- LinkedIn
+- GitHub
+- Portfolio
+- Location
+- Website
+- Social media
+- Other contact details
+
+Only display contact information actually supplied by the
+user.
+
+============================================================
+PROFESSIONAL SUMMARY
+============================================================
+
+Use:
+
+## Professional Summary
+
+Write a concise professional summary using the user's
+actual background.
+
+Improve grammar and wording where appropriate.
+
+Do not invent experience, achievements, technologies or
+qualifications.
+
+============================================================
+SKILLS
+============================================================
+
+Use:
+
+## Skills
+
+Present the supplied skills clearly and concisely.
+
+Do not add skills merely because they are common for the
+target role.
+
+Do not assume that knowledge of one technology means the
+user knows another technology.
+
+============================================================
+WORK EXPERIENCE
+============================================================
+
+Use:
+
+## Experience
+
+Structure each supplied role clearly.
+
+For example:
+
+### Job Title | Company
+
+Dates
+
+- Responsibility or achievement from the user's information
+- Responsibility or achievement from the user's information
+
+Improve wording and grammar where appropriate.
+
+Do not invent:
+- Employers
+- Job titles
+- Dates
+- Responsibilities
+- Achievements
+- Metrics
+- Technologies
+
+If the user supplied several roles, keep them as separate
+entries.
+
+============================================================
+EDUCATION
+============================================================
+
+Use:
+
+## Education
+
+Structure the supplied education clearly.
+
+For example:
+
+### Degree | Institution
+
+Dates
+
+Only include information actually provided.
+
+Do not invent:
+- Grades
+- Modules
+- Awards
+- Dates
+- Classifications
+
+============================================================
+PROJECTS
+============================================================
+
+ONLY include this section if projects were provided.
+
+Use:
+
+## Projects
+
+Give each supplied project its own heading.
+
+Explain the project using only the user's supplied
+information.
+
+Do not invent:
+- Technologies
+- Features
+- Users
+- Results
+- Metrics
+- Responsibilities
+
+============================================================
+CERTIFICATIONS
+============================================================
+
+ONLY include this section if certifications were provided.
+
+Use:
+
+## Certifications
+
+List the supplied certifications clearly.
+
+Do not invent:
+- Certification dates
+- Issuing organisations
+- Grades
+- Expiry dates
+
+============================================================
+WRITING STYLE
+============================================================
+
+The CV should feel like a real professional CV written
+for a human recruiter.
+
+Use:
+
+- Clear professional language
+- Concise sentences
+- Strong action verbs when supported by the user's
+  information
+- Short bullet points
+- Consistent formatting
+- Consistent tense
+- Professional terminology
+- ATS-friendly Markdown
+
+Avoid:
+
+- Fluffy language
+- Generic motivational statements
+- First-person pronouns where unnecessary
+- Long paragraphs
+- Repetition
+- Decorative symbols
+- Emojis
+- Tables
+- Columns
+- Graphics
+- Fake achievements
+- Fake metrics
+- Fake keywords
+
+Do not write an introduction such as:
+
+"Here is your CV."
+
+The "cv" field must contain ONLY the CV.
+
+============================================================
+IMPORTANT TRUTHFULNESS RULE
+============================================================
+
+NEVER invent information to make the CV appear stronger.
+
+If the user did not provide something, leave it out.
+
+It is better to have a shorter truthful CV than a longer
+CV containing fabricated information.
+
+============================================================
+ATS ANALYSIS
+============================================================
+
+After creating the CV, analyse it against:
+
+- Target role
+- Job description, if supplied
+- Relevant skills
+- Relevant keywords
+- Summary relevance
+- Experience relevance
+- Projects
+- Education
+- Certifications
+- Evidence of achievements
+- Action verbs
+- ATS structure
+- Readability
+- Completeness
+
+The score must be between 0 and 100.
+
+The score should represent the quality and relevance of
+the supplied CV information for the target role.
+
+Do not award points merely because a section exists.
+
+Identify:
+
+- strengths
+- specific improvements
+- missing relevant keywords
+- missing information
+- a concise explanation of the score
+
+Suggestions must be specific to this user's information.
+
+Do not automatically recommend LinkedIn, GitHub,
+portfolio websites or other information unless it is
+relevant to the supplied CV.
+
+============================================================
+RESPONSE FORMAT
+============================================================
+
+Return ONLY valid JSON.
+
+Use exactly:
+
+{{
+    "cv": "FULL MARKDOWN CV HERE",
+    "score": 0,
+    "strengths": [
+        "specific strength"
+    ],
+    "improvements": [
+        "specific improvement"
+    ],
+    "missing_keywords": [
+        "keyword"
+    ],
+    "missing_information": [
+        "specific missing information"
+    ],
+    "analysis": "Short explanation of the score."
+}}
+
+Important:
+
+- score must be an integer from 0 to 100.
+- strengths must be an array of strings.
+- improvements must be an array of strings.
+- missing_keywords must be an array of strings.
+- missing_information must be an array of strings.
+- analysis must be a string.
+- Do not wrap JSON in Markdown code fences.
+- Do not add text outside the JSON.
 """
+
+        # ----------------------------------------------------
+        # AI REQUEST
+        # ----------------------------------------------------
 
         messages = [
             {
                 "role": "system",
                 "content": """
-You are AlphaBot's professional CV generator.
+You are AlphaBot's professional CV generation
+and ATS analysis engine.
 
-Create polished, professional and ATS-friendly CVs.
+Create truthful, concise, professional CVs.
 
-Always respond using Markdown only.
+The user's supplied information is the only source of
+truth.
 
-Use:
-# for headings
-**bold** for important titles
-*italic* for dates or locations
-- for bullet points
+Never invent:
+- Experience
+- Employers
+- Job titles
+- Dates
+- Qualifications
+- Technologies
+- Responsibilities
+- Achievements
+- Metrics
+- Skills
+- Contact information
 
-Do not add explanations before or after the CV.
+Never create empty CV sections.
 
-Return only the CV.
+If the user did not provide information for a section,
+omit that section completely.
+
+The final CV should be suitable for submission to a
+real employer and should be easy for both recruiters
+and ATS systems to read.
+
+Return valid JSON when requested.
 """,
             },
             {
@@ -541,159 +1142,188 @@ Return only the CV.
             temperature=0.3,
         )
 
-        score = calculate_cv_score(
-            data,
-            content,
+        # ----------------------------------------------------
+        # Validate AI response
+        # ----------------------------------------------------
+
+        if not content or not content.strip():
+
+            release_quota(request.user)
+
+            return JsonResponse(
+                {
+                    "error": (
+                        "AlphaBot could not generate "
+                        "your CV. Please try again."
+                    ),
+                },
+                status=502,
+            )
+
+        # ----------------------------------------------------
+        # Parse AI JSON
+        # ----------------------------------------------------
+
+        cleaned_content = clean_ai_json(
+            content
         )
 
-        suggestions = generate_improvement_suggestions(
-            data,
-            content,
+        try:
+
+            result = json.loads(
+                cleaned_content
+            )
+
+        except json.JSONDecodeError:
+
+            release_quota(request.user)
+
+            return JsonResponse(
+                {
+                    "error": (
+                        "AlphaBot returned an invalid CV "
+                        "analysis. Please try again."
+                    ),
+                },
+                status=502,
+            )
+
+        # ----------------------------------------------------
+        # Validate generated CV
+        # ----------------------------------------------------
+
+        cv = str(
+            result.get("cv", "")
+        ).strip()
+
+        if not cv:
+
+            release_quota(request.user)
+
+            return JsonResponse(
+                {
+                    "error": (
+                        "AlphaBot generated an empty CV. "
+                        "Please try again."
+                    ),
+                },
+                status=502,
+            )
+
+        # ----------------------------------------------------
+        # Validate score
+        # ----------------------------------------------------
+
+        raw_score = result.get(
+            "score",
+            0,
         )
 
-        usage = get_usage(request.user)
+        try:
+
+            score = int(
+                float(raw_score)
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            score = 0
+
+        score = min(
+            max(score, 0),
+            100,
+        )
+
+        # ----------------------------------------------------
+        # Analysis
+        # ----------------------------------------------------
+
+        strengths = safe_list(
+            result.get(
+                "strengths",
+                [],
+            )
+        )
+
+        improvements = safe_list(
+            result.get(
+                "improvements",
+                [],
+            )
+        )
+
+        missing_keywords = safe_list(
+            result.get(
+                "missing_keywords",
+                [],
+            )
+        )
+
+        missing_information = safe_list(
+            result.get(
+                "missing_information",
+                [],
+            )
+        )
+
+        analysis = str(
+            result.get(
+                "analysis",
+                "",
+            )
+        ).strip()
+
+        # ----------------------------------------------------
+        # Final response
+        # ----------------------------------------------------
+
+        usage = get_usage(
+            request.user
+        )
 
         return JsonResponse(
             {
-                "cv": content,
+                "cv": cv,
                 "score": score,
-                "improvement_suggestions": suggestions,
+                "strengths": strengths[:5],
+                "improvements": improvements[:5],
+                "missing_keywords": missing_keywords[:10],
+                "missing_information": missing_information[:5],
+                "analysis": analysis,
+                "target_role": target_role,
+                "has_job_description": bool(
+                    job_description
+                ),
                 **usage,
             }
         )
 
-    except json.JSONDecodeError:
-
-        release_quota(request.user)
-
-        return JsonResponse(
-            {"error": "Invalid JSON data."},
-            status=400,
-        )
+    # --------------------------------------------------------
+    # Validation error
+    # --------------------------------------------------------
 
     except ValidationError as error:
 
         release_quota(request.user)
 
         return JsonResponse(
-            {"error": str(error)},
+            {
+                "error": str(error),
+            },
             status=400,
         )
+
+    # --------------------------------------------------------
+    # AI / unexpected error
+    # --------------------------------------------------------
 
     except Exception as error:
 
         release_quota(request.user)
 
-        return ai_error_response(error)
-
-
-# ============================================================
-# CV SCORING
-# ============================================================
-
-def calculate_cv_score(data, cv_text):
-
-    score = 50
-
-    summary = data.get("summary", "")
-    experience = data.get("experience", "")
-    education = data.get("education", "")
-    skills = data.get("skills", "")
-
-    if len(summary) > 100:
-        score += 5
-
-    if len(experience) > 300:
-        score += 10
-
-    if len(education) > 100:
-        score += 5
-
-    cv_text_lower = cv_text.lower()
-
-    if (
-        "achieved" in cv_text_lower
-        or "improved" in cv_text_lower
-    ):
-        score += 10
-
-    if any(
-        word in cv_text_lower
-        for word in [
-            "led",
-            "managed",
-            "developed",
-        ]
-    ):
-        score += 10
-
-    skills_count = len(
-        [
-            skill
-            for skill in skills.split(",")
-            if skill.strip()
-        ]
-    )
-
-    score += min(
-        skills_count * 2,
-        10,
-    )
-
-    return min(score, 100)
-
-
-def generate_improvement_suggestions(
-    data,
-    cv_text,
-):
-
-    suggestions = []
-
-    if len(
-        data.get("summary", "")
-    ) < 50:
-
-        suggestions.append(
-            "Your professional summary could be more detailed."
+        return ai_error_response(
+            error
         )
-
-    if not any(
-        char.isdigit()
-        for char in data.get(
-            "experience",
-            "",
-        )
-    ):
-
-        suggestions.append(
-            "Add quantifiable achievements, "
-            "such as 'Increased sales by 20%'."
-        )
-
-    if (
-        "http" not in data.get("linkedin", "")
-        and "http" not in data.get("github", "")
-    ):
-
-        suggestions.append(
-            "Consider adding LinkedIn or GitHub links."
-        )
-
-    if "\n\n" not in cv_text:
-
-        suggestions.append(
-            "Add more spacing between sections."
-        )
-
-    if (
-        "**" not in cv_text
-        and "*" not in cv_text
-    ):
-
-        suggestions.append(
-            "Use bold and italic formatting "
-            "to improve readability."
-        )
-
-    return suggestions[:5]

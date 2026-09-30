@@ -9,11 +9,14 @@ export default function ChatWelcome({
 }: ChatWelcomeProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center pb-20 text-center">
-      <div className="mb-6 text-6xl font-semibold text-purple-400">
+      <div
+        aria-hidden="true"
+        className="mb-6 text-6xl font-semibold text-purple-400"
+      >
         α
       </div>
 
-      <h2 className="text-3xl font-semibold sm:text-4xl">
+      <h2 className="text-3xl font-semibold text-white sm:text-4xl">
         How can I help?
       </h2>
 
@@ -22,7 +25,9 @@ export default function ChatWelcome({
         brainstorm or just have a conversation.
       </p>
 
-      <ChatSuggestions onSelect={onSelectSuggestion} />
+      <ChatSuggestions
+        onSelect={onSelectSuggestion}
+      />
     </div>
   );
 }

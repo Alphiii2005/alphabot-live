@@ -12,11 +12,16 @@ export default function ChatMessage({
   return (
     <div
       className={`message-in flex gap-3 ${
-        isUser ? "justify-end" : "justify-start"
+        isUser
+          ? "justify-end"
+          : "justify-start"
       }`}
     >
       {!isUser && (
-        <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-purple-400/20 bg-purple-500/10 text-lg font-semibold text-purple-400">
+        <div
+          aria-hidden="true"
+          className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-purple-400/20 bg-purple-500/10 text-lg font-semibold text-purple-400"
+        >
           α
         </div>
       )}
@@ -28,7 +33,7 @@ export default function ChatMessage({
             : "border border-white/10 bg-white/[0.04] text-zinc-200 backdrop-blur-xl"
         }`}
       >
-        <p className="whitespace-pre-wrap leading-7">
+        <p className="whitespace-pre-wrap break-words leading-7">
           {content}
         </p>
       </div>

@@ -228,7 +228,9 @@ def login_api(request):
 
     login(request, user)
 
-    return JsonResponse(
+    request.session.save()
+
+    response = JsonResponse(
         {
             "message": "Login successful",
             "user": {
@@ -240,6 +242,16 @@ def login_api(request):
         status=200,
     )
 
+    response.set_cookie(
+        key="sessionid",
+        value=request.session.session_key,
+        path="/",
+        secure=False,
+        httponly=True,
+        samesite="Lax",
+    )
+
+    return response
 
 def current_user_api(request):
     if not request.user.is_authenticated:
