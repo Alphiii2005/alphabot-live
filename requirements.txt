@@ -9,3 +9,4 @@ resend==2.47.0
 gunicorn
 whitenoise
 psycopg2-binary==2.9.10
+Pillow==11.2.1
