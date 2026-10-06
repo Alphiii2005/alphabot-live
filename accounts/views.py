@@ -3,12 +3,13 @@ import json
 from django.conf import settings
 from django.contrib.auth import login, logout
 from django.contrib.auth.models import User
+from django.db import transaction
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import EmailVerification
-from .utils import create_verification
+from .utils import VerificationEmailError, create_verification
 
 
 @csrf_exempt
@@ -56,16 +57,29 @@ def register_api(request):
             status=400,
         )
 
-    user = User.objects.create_user(
-        username=username,
-        email=email,
-        password=password,
-    )
+    try:
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+            )
 
-    user.is_active = False
-    user.save(update_fields=["is_active"])
+            user.is_active = False
+            user.save(update_fields=["is_active"])
 
-    create_verification(user)
+            create_verification(user)
+    except VerificationEmailError:
+        return JsonResponse(
+            {
+                "error": (
+                    "Your account could not be created because "
+                    "the verification email could not be sent. "
+                    "Please try again shortly."
+                )
+            },
+            status=503,
+        )
 
     return JsonResponse(
         {
@@ -173,7 +187,18 @@ def resend_verification_api(request):
             status=200,
         )
 
-    create_verification(user)
+    try:
+        create_verification(user)
+    except VerificationEmailError:
+        return JsonResponse(
+            {
+                "error": (
+                    "We couldn't send the verification email. "
+                    "Please try again shortly."
+                )
+            },
+            status=503,
+        )
 
     return JsonResponse(
         {"message": "Verification email sent."},
@@ -222,15 +247,16 @@ def login_api(request):
 
     if not user.is_active:
         return JsonResponse(
-            {"error": "Please verify your email before logging in"},
+            {
+                "error": "Please verify your email before logging in",
+                "code": "EMAIL_NOT_VERIFIED",
+            },
             status=403,
         )
 
     login(request, user)
 
-    request.session.save()
-
-    response = JsonResponse(
+    return JsonResponse(
         {
             "message": "Login successful",
             "user": {
@@ -241,17 +267,6 @@ def login_api(request):
         },
         status=200,
     )
-
-    response.set_cookie(
-        key="sessionid",
-        value=request.session.session_key,
-        path="/",
-        secure=False,
-        httponly=True,
-        samesite="Lax",
-    )
-
-    return response
 
 def current_user_api(request):
     if not request.user.is_authenticated:

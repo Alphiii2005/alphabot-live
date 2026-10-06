@@ -83,7 +83,7 @@ export default function LoginForm() {
     } catch (error) {
       if (
         error instanceof APIError &&
-        error.status === 401
+        (error.status === 401 || error.status === 403)
       ) {
         setError(
           error.data?.code ===
@@ -91,13 +91,6 @@ export default function LoginForm() {
             ? "Please verify your email before logging in. Check your inbox for your verification link."
             : error.message ||
                 "Your email or password is incorrect."
-        );
-      } else if (
-        error instanceof APIError &&
-        error.status === 403
-      ) {
-        setError(
-          "You don't currently have permission to log in. Please verify your email and try again."
         );
       } else if (
         error instanceof APIError &&

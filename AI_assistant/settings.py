@@ -235,6 +235,26 @@ EMAIL_VERIFICATION_TIMEOUT = config(
 
 
 # ---------------------------------------------------------
+# Frontend origin
+# ---------------------------------------------------------
+
+_frontend_origins = [
+    origin.strip().rstrip("/")
+    for origin in config(
+        "FRONTEND_URL",
+        default="http://localhost:3000",
+    ).split(",")
+    if origin.strip()
+]
+
+FRONTEND_URL = (
+    _frontend_origins[0]
+    if _frontend_origins
+    else "http://localhost:3000"
+)
+
+
+# ---------------------------------------------------------
 # CORS
 # ---------------------------------------------------------
 
@@ -244,11 +264,7 @@ if DEBUG:
         "http://127.0.0.1:3000",
     ]
 else:
-    CORS_ALLOWED_ORIGINS = [
-        origin.strip()
-        for origin in config("FRONTEND_URL", default="").split(",")
-        if origin.strip()
-    ]
+    CORS_ALLOWED_ORIGINS = list(_frontend_origins)
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -263,11 +279,7 @@ if DEBUG:
         "http://127.0.0.1:3000",
     ]
 else:
-    CSRF_TRUSTED_ORIGINS = [
-        origin.strip()
-        for origin in config("FRONTEND_URL", default="").split(",")
-        if origin.strip()
-    ]
+    CSRF_TRUSTED_ORIGINS = list(_frontend_origins)
 
 
 # ---------------------------------------------------------
@@ -278,9 +290,13 @@ SESSION_COOKIE_HTTPONLY = True
 
 SESSION_COOKIE_SECURE = not DEBUG
 
-SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SAMESITE = "Lax" if DEBUG else "None"
 
 SESSION_COOKIE_PATH = "/"
+
+CSRF_COOKIE_SECURE = not DEBUG
+
+CSRF_COOKIE_SAMESITE = "Lax" if DEBUG else "None"
 
 
 if not DEBUG:
@@ -292,7 +308,6 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
 
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    CSRF_COOKIE_SECURE = True
     X_FRAME_OPTIONS = "DENY"
 
 

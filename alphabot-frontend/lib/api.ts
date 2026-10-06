@@ -111,7 +111,11 @@ export async function apiFetch(
 
       case 401:
       case 403:
-        message = "Please log in to continue.";
+        message =
+          data?.error ||
+          data?.detail ||
+          data?.message ||
+          "Please log in to continue.";
         break;
 
       case 404:
@@ -129,6 +133,9 @@ export async function apiFetch(
       default:
         if (response.status >= 500) {
           message =
+            data?.error ||
+            data?.detail ||
+            data?.message ||
             "Something went wrong on AlphaBot's side. Please try again in a moment.";
         } else if (!message) {
           message = "Something went wrong. Please try again.";
