@@ -8,12 +8,8 @@ export default function RegisterPage() {
   const [lockedOpen, setLockedOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(
-    null
-  );
-  const [success, setSuccess] = useState<string | null>(
-    null
-  );
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const isExpanded = lockedOpen || hovered;
 
@@ -27,9 +23,7 @@ export default function RegisterPage() {
     setError(null);
     setSuccess(null);
 
-    const formData = new FormData(
-      event.currentTarget
-    );
+    const formData = new FormData(event.currentTarget);
 
     const username = String(
       formData.get("username") || ""
@@ -69,7 +63,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const data = await apiFetch(
+      await apiFetch(
         "/api/auth/register/",
         {
           method: "POST",
@@ -83,8 +77,7 @@ export default function RegisterPage() {
       );
 
       setSuccess(
-        data?.message ||
-          "Your account has been created. Check your email to verify your account."
+        "Account created! We've sent a verification email to your inbox. Please verify your email before logging in."
       );
 
       event.currentTarget.reset();
