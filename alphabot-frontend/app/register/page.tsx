@@ -63,24 +63,19 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await apiFetch(
-        "/api/auth/register/",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            username,
-            email,
-            password,
-            confirm_password: confirm,
-          }),
-        }
-      );
+      await apiFetch("/api/auth/register/", {
+        method: "POST",
+        body: JSON.stringify({
+          username,
+          email,
+          password,
+          confirm_password: confirm,
+        }),
+      });
 
       setSuccess(
         "Account created! We've sent a verification email to your inbox. Please verify your email before logging in."
       );
-
-      event.currentTarget.reset();
     } catch (error) {
       if (error instanceof APIError) {
         const backendErrors =
