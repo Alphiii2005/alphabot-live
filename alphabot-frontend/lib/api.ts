@@ -1,7 +1,5 @@
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:8000";
-  
+const API_URL = "";
+
 export class APIError extends Error {
   status: number;
   data: any;
@@ -45,11 +43,6 @@ export async function apiFetch(
 
   let data: any = null;
 
-  /*
-   * Django should return JSON for our API endpoints.
-   * If something unexpected such as an HTML error page
-   * comes back, convert it into a friendly API error.
-   */
   if (contentType.includes("application/json")) {
     try {
       data = await response.json();
