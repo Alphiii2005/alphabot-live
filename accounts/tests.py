@@ -23,6 +23,12 @@ class AuthApiTests(TestCase):
         self.assertEqual(response.json(), {"authenticated": False})
         self.assertNotIn("Location", response)
 
+    def test_current_user_missing_slash_redirects_to_canonical_url(self):
+        response = self.client.get("/api/auth/me")
+
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response["Location"], "/api/auth/me/")
+
     @patch("accounts.utils.resend.Emails.send")
     def test_register_creates_inactive_user_when_email_sends(
         self,

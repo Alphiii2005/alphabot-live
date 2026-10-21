@@ -10,7 +10,9 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: `${apiOrigin}/api/:path*`,
+        // Next normalizes the wildcard by dropping the incoming trailing
+        // slash. Add it explicitly because Django's APPEND_SLASH expects it.
+        destination: `${apiOrigin}/api/:path*/`,
       },
     ];
   },
