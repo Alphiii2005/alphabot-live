@@ -23,13 +23,17 @@ export async function apiFetch(
   let response: Response;
 
   try {
+    const { headers: optionHeaders, ...requestOptions } = options;
+
     response = await fetch(`${API_URL}${endpoint}`, {
+      ...requestOptions,
+      // Keep session cookies enabled even if an individual caller supplies
+      // other RequestInit options.
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        ...(options.headers || {}),
+        ...(optionHeaders || {}),
       },
-      ...options,
     });
   } catch {
     throw new APIError(

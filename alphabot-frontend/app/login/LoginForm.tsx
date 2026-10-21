@@ -72,6 +72,17 @@ export default function LoginForm() {
         }
       );
 
+      // A successful credential response does not prove the browser retained
+      // the Django session cookie. Confirm it before leaving the login page.
+      const session = await apiFetch("/api/auth/me/");
+
+      if (!session?.authenticated) {
+        throw new APIError(
+          "Your login was accepted, but AlphaBot couldn't confirm your session. Please try again.",
+          401
+        );
+      }
+
       setSuccess(
         data?.message ||
           "Login successful. Welcome back."
