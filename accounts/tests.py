@@ -16,6 +16,13 @@ class AuthApiTests(TestCase):
         self.assertTrue(hasattr(settings, "FRONTEND_URL"))
         self.assertEqual(settings.FRONTEND_URL, "http://localhost:3000")
 
+    def test_current_user_returns_json_401_when_logged_out(self):
+        response = self.client.get("/api/auth/me/")
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json(), {"authenticated": False})
+        self.assertNotIn("Location", response)
+
     @patch("accounts.utils.resend.Emails.send")
     def test_register_creates_inactive_user_when_email_sends(
         self,

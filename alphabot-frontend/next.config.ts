@@ -1,10 +1,9 @@
 
 import type { NextConfig } from "next";
 
-const apiOrigin = (
-  process.env.ALPHABOT_API_URL ||
-  "https://alphabot-api-fvuu.onrender.com"
-).replace(/\/$/, "");
+// Keep the proxy target on the Django service. A configurable origin could
+// point back to the Vercel app and make every /api request rewrite to itself.
+const apiOrigin = "https://alphabot-api-fvuu.onrender.com";
 
 const nextConfig: NextConfig = {
   async rewrites() {
